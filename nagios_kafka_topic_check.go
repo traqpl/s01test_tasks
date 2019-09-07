@@ -9,11 +9,10 @@ import (
 
 func main() {
 
-	//todo: prametrize from command line s
-	// brokers := []string{"localhost:9092", "127.0.0.1:9092"}
-	// topic := "test"
-	// login := "somelogin"
-	// password := "somepassword"
+	if len(os.Args) < 4 {
+		fmt.Println("Usage: topic login password kafka_server1 kafka_server2 kafka_serverN")
+		os.Exit(2)
+	}
 	topic := os.Args[1]
 	login := os.Args[2]
 	password := os.Args[3]
