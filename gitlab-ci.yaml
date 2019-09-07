@@ -1,0 +1,24 @@
+stages:
+  - mavenbuild
+  - dockerbuild
+  - deploy
+
+
+build_job:
+  stage: build
+  script:
+    - make maven
+
+
+dockerbuild_job:
+  stage: dockerbuild
+  script:
+    - make dockerbuild
+
+deploy_job:
+  stage: deploy
+  script:
+    - make deploy
+
+  
+
