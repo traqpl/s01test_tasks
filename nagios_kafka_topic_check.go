@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-	if len(os.Args) < 4 {
+	if len(os.Args) < 5 {
 		fmt.Println("Usage: topic login password kafka_server1 kafka_server2 kafka_serverN")
 		os.Exit(2)
 	}
