@@ -1,0 +1,231 @@
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: ${APPNAME}
+objects:
+
+# networkpolicy
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-all-${APPNAME}
+    namespace: ${PROJECT}
+    labels:
+      app: ${APPNAME}
+  spec:
+    podSelector:
+      matchLabels:
+        app: ${APPNAME}
+    ingress:
+    - ports:
+      - port: ${{PORT}}
+      from: []
+
+# service
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${APPNAME}
+    namespace: ${PROJECT}
+    labels:
+      app: ${APPNAME}
+  spec:
+    selector:
+      app: ${APPNAME}
+    ports:
+    - name: ${APPNAME}
+      port: ${{PORT}}
+      targetPort: ${{PORT}}
+      protocol: TCP
+
+# Deployment
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: ${APPNAME}
+    namespace: ${PROJECT}
+    labels:
+      app: ${APPNAME}
+  spec:
+    replicas: 1
+    template:
+      metadata:
+        namespace: ${PROJECT}
+        labels:
+          app: ${APPNAME}
+      spec:
+        containers:
+        - name: ${APPNAME}
+          image: "${REGISTRY_URL}/${PROJECT}/${APPNAME}:${IMAGE_LABEL}"
+          env:
+            - name: GRAFANATOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cadaptergrafanatoken
+                  key: token
+          volumeMounts:
+          - name: ${APPNAME}-config
+            mountPath: /etc/${APPNAME}/cfg.ini
+            subPath: cfg.ini
+            readOnly: true
+          - name: clienttls
+            mountPath: /etc/${APPNAME}/ssl/client
+            readOnly: true
+          - name: servercrt
+            mountPath: /etc/${APPNAME}/ssl/ca
+          - name: ${APPNAME}-db
+            mountPath: /usr/local/db
+          - name: ${APPNAME}-gitlocal
+            mountPath: /usr/local/git
+          livenessProbe:
+            httpGet:
+              path: /api/v1/hadoop-automation
+              port: ${{PORT}}
+            initialDelaySeconds: 120
+            periodSeconds: 15
+          ports:
+          - containerPort: ${{PORT}}
+          resources:
+            requests:
+              cpu: 400m
+              memory: 100Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+        volumes:
+        - name: ${APPNAME}-config
+          configMap:
+            name: ${APPNAME}-config
+        - name: clienttls
+          secret:
+            defaultMode: 420
+            items:
+              - key: tls.crt
+                path: client.cer.pem
+              - key: tls.key
+                path: client.key.pem
+            secretName: cadaptertls
+        - name: servercrt
+          secret:
+            defaultMode: 420
+            secretName: cadaptercacrt
+        - name: ${APPNAME}-db
+          persistentVolumeClaim:
+            claimName: ${APPNAME}-sqlite
+        - name: ${APPNAME}-gitlocal
+          persistentVolumeClaim:
+            claimName: ${APPNAME}-gitlocal
+
+# route
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${APPNAME}
+  spec:
+    host: ${APPNAME}.${OPENSHIFT_URL}
+    to:
+      kind: Service
+      name: ${APPNAME}
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+
+# cfg.ini
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ${APPNAME}-config
+    namespace: ${PROJECT}
+    labels:
+      app: ${APPNAME}
+  data:
+    cfg.ini: |
+
+      [sslkeys]
+      ClientCertFile = "/etc/${APPNAME}/ssl/client/client.cer.pem"
+      ClientKeyFile  = "/etc/${APPNAME}/ssl/client/client.key.pem"
+      CaCertFile     = "/etc/${APPNAME}/ssl/ca/server.cer.pem"
+
+      [http]
+      Port        = ${PORT}
+      ApiURL      = "${APIURL}"
+
+      [kafka]
+      GroupID         = ${GROUPID}
+      Topic           = ${TOPIC}
+      Partition       = "0"
+      Brokers		      = "${BROKERS}"
+
+      [authservice]
+      Authservice     = "${AUTHSERVICE}"
+
+      [sqlite]
+      DbFile		= "${DBFILE}"
+
+      [git]
+      Gitrepo = "${GITREPO}"
+      Localrepo = "${LOCALREPO}"
+
+      [monitoring]
+      Host = "${MONHOST}"
+      Port = "${MONPORT}"
+      Grafana = "${GRAFANA}"
+      GraphTemplate = "${MONGRAFANATEMP}"
+ 
+# parameters
+parameters:
+  - name: REGISTRY_URL
+    description: URL of docker registry with required images
+    required: true
+  - name: IMAGE_LABEL
+    description: Label with metadata of image
+    required: true
+  - name: PROJECT
+    description: OpenShift Project
+    required: true
+  - name: OPENSHIFT_URL
+    descripiton: Full URL of OpenShift app
+    required: true
+  - name: APPNAME
+    descripiton: application name
+    required: true
+  - name: GROUPID
+    description: Kafka group id
+    required: true
+  - name: TOPIC
+    description: Kafka topic
+    required: true
+  - name: BROKERS
+    description: Kafka brokers list
+    required: true
+  - name: PORT
+    description: listen port for cfg.ini
+    required: true
+  - name: APIURL
+    description: api url for cfg.ini
+    required: true
+  - name: DBFILE
+    description: sqlite file name for cfg.ini
+    required: true
+  - name: AUTHSERVICE
+    description: 
+    required: true
+  - name: GITREPO
+    description: remote git repository
+    required: true
+  - name: LOCALREPO
+    description: directory for local repository
+    required: true
+  - name: MONHOST
+    description: graphite host for monitoring
+    required: true
+  - name: MONPORT
+    description: graphite port for monitoring
+    required: true
+  - name: GRAFANA
+    description: grafana url
+    required: true
+  - name: MONGRAFANATEMP
+    description: grafana graph template
+    required: true
