@@ -1,7 +1,6 @@
-all: gobuild maven dockerbuild deploy
-
+all: gobuild 
 gobuild: 
-	go build -o kafka_check nagios_kafka_topic_check.go
+	cd nagios/kafka && go build -o kafka_check nagios_kafka_topic_check.go
 
 maven:
 	git clone https://github.com/TechPrimers/docker-mysql-spring-boot-example.git

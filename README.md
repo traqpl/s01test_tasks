@@ -2,17 +2,27 @@
 
 ## Firts task
 
+Is superlate and this is last task for me, so sorry for bash script only, but should work.
+
+Copy nagios_es_plugin.cfg file to /etc/nagios-plugins/config/ dir, and add to main nagios cfg.
+
+Next copy kafka_check to /usr/lib/nagios/plugins/ and 
+
+`chmod u+x /usr/lib/nagios/plugins/elastic_check.sh`
+
 ## Second task
 
-Copy nagios_kafka_plugin.cfg file to /etc/nagios-plugins/config/ dir.
+Copy nagios_kafka_plugin.cfg file to /etc/nagios-plugins/config/ dir, and add to main nagios.cfg
 
 For compliation you will have install go lang in your os:  <https://golang.org/doc/install>
 
 After that just simply run in this directory:
 
-`make all`
+`make`
 
-Next copy kafka_check to /usr/lib/nagios/plugins/ and chmod u+x /usr/lib/nagios/plugins/kafka_check
+Next copy nagios/kafka/kafka_check to /usr/lib/nagios/plugins/ and:
+
+`chmod u+x /usr/lib/nagios/plugins/kafka_check`
 
 ## Third task
 
